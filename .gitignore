@@ -1,0 +1,33 @@
+# Secrets — NEVER commit. Real credentials live here.
+.env
+# (.env.example IS committed — it's the template with empty values.)
+
+# Google OAuth secrets — both files contain credentials
+data/client_secret*.json
+data/google_token.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.eggs/
+*.egg-info/
+
+# Runtime artifacts (real booking data, contact phone numbers, PDFs)
+data/
+outputs/
+*.db
+*.log
+
+# Scraper artifacts
+*_dump.html
+probe_screenshot.png
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store

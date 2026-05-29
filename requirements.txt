@@ -1,0 +1,21 @@
+# Required for ALL planners
+requests>=2.31,<3
+python-dotenv>=1.0,<2
+
+# Required for PDF invoices (falls back to .txt if missing)
+reportlab>=4.0,<5
+
+# Required only for --planner claude
+anthropic>=0.40,<1
+
+# Required for Google Calendar integration (optional; calendar is skipped
+# gracefully when these are absent and GOOGLE_CLIENT_SECRETS_PATH is unset).
+# We use raw HTTPS via http_client for the API call, so the heavier
+# `google-api-python-client` is intentionally NOT a dependency.
+google-auth>=2.20,<3
+google-auth-oauthlib>=1.0,<2
+
+# Windows-only: ships the IANA timezone database so `zoneinfo.ZoneInfo`
+# can resolve names like 'Asia/Kolkata'. No-op on Linux/macOS, which read
+# the system tzdb. Used by providers/booking.py for slot time-of-day matching.
+tzdata>=2024.1; sys_platform == "win32"
