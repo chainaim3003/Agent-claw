@@ -8,6 +8,7 @@ import json
 
 from ..providers import (get_user_location, search_restaurants,
                          check_availability, book_reservation, send_sms,
+                         send_email,
                          create_calendar_event,
                          ProviderError)
 from ..storage import save_booking
@@ -111,6 +112,25 @@ TOOL_SCHEMAS = [
     {
         "type": "function",
         "function": {
+            "name": "send_email",
+            "description": (
+                "Send a booking confirmation email via Gmail SMTP. Use once for "
+                "the customer and once for the restaurant."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "to": {"type": "string", "description": "recipient email"},
+                    "subject": {"type": "string"},
+                    "body": {"type": "string"},
+                },
+                "required": ["to", "subject", "body"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "save_booking",
             "description": "Persist the booking + generate PDF invoice. Returns row_id and invoice_path.",
             "parameters": {
@@ -176,6 +196,8 @@ def dispatch(name: str, args: dict, ask_human_fn) -> dict:
                                     args["party"], args["contact"])
         if name == "send_sms":
             return send_sms(args["to"], args["body"])
+        if name == "send_email":
+            return send_email(args["to"], args["subject"], args["body"])
         if name == "save_booking":
             return save_booking(args["booking"])
         if name == "create_calendar_event":

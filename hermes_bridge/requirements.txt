@@ -1,0 +1,4 @@
+# MCP bridge for Hermes. The project's own deps (in ../requirements.txt) must
+# also be installed in the same interpreter, since this bridge imports and runs
+# your real providers.
+mcp>=1.0.0

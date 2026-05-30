@@ -13,6 +13,7 @@ deployment the same seam would be replaced by 'wait for next inbound SMS'."""
 from __future__ import annotations
 from dataclasses import dataclass, field
 import json
+import os
 
 import requests
 
@@ -21,6 +22,7 @@ from ..http_client import request as http_request
 from ..logging_setup import get_logger
 from ..providers import (get_user_location, search_restaurants,
                          check_availability, book_reservation, send_sms,
+                         send_email,
                          create_calendar_event,
                          ProviderError)
 from ..storage import save_booking
@@ -154,6 +156,44 @@ def run_rule(ctx: Context) -> dict | None:
         ctx.trace("send_sms", f"status={sms['status']} sid={sms['sid']} body_len={len(body)}")
     except ProviderError as e:
         ctx.trace("send_sms", f"FAILED (non-fatal): {e}")
+
+    # --- email BOTH sides: customer + restaurant (non-fatal, like SMS) -------
+    # Recipients are configurable via .env; defaults are the addresses you gave.
+    cust_email = (os.environ.get("CUSTOMER_EMAIL") or "nishanthini01ai@gmail.com").strip()
+    rest_email = (os.environ.get("RESTAURANT_EMAIL") or "kalaivanimanickam865@gmail.com").strip()
+    when = f"{ctx.date} {slot[11:16]}"
+    cust_subject = f"Reservation confirmed - {rest['name']} on {when}"
+    cust_body = (
+        "Hi,\n\nYour table is confirmed.\n\n"
+        f"  Restaurant  : {rest['name']}\n"
+        f"  Date / time : {when}\n"
+        f"  Party size  : {ctx.party}\n"
+        f"  Confirmation: {booking['confirmation_id']}\n"
+        + (f"  Details     : {rest['eazydiner_url']}\n" if rest.get("eazydiner_url") else "")
+        + "\nThank you,\nAgent-Claw Reservations\n"
+    )
+    rest_subject = (
+        f"New booking - {ctx.party} guest(s) on {when} "
+        f"(ref {booking['confirmation_id']})"
+    )
+    rest_body = (
+        "New reservation received via Agent-Claw.\n\n"
+        f"  Restaurant  : {rest['name']}\n"
+        f"  Date / time : {when}\n"
+        f"  Party size  : {ctx.party}\n"
+        f"  Customer    : {ctx.contact}\n"
+        f"  Confirmation: {booking['confirmation_id']}\n"
+        "\nPlease prepare the table.\n-- Agent-Claw\n"
+    )
+    for who, addr, subj, ebody in (
+        ("customer", cust_email, cust_subject, cust_body),
+        ("restaurant", rest_email, rest_subject, rest_body),
+    ):
+        try:
+            er = send_email(addr, subj, ebody)
+            ctx.trace("send_email", f"{who} -> {addr} status={er['status']}")
+        except ProviderError as e:
+            ctx.trace("send_email", f"{who} -> {addr} FAILED (non-fatal): {e}")
 
     saved = save_booking(booking)
     ctx.trace("save_booking", f"row={saved['row_id']} invoice={saved['invoice_path']}")
